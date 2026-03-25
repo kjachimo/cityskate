@@ -1,0 +1,1173 @@
+openapi: 3.0.3
+info:
+  title: CitySkate API
+  description: >
+    REST API for the RollerSkating CityGuide, Rental and Event System.
+    Supports user management, city guide (routes & locations), rental point
+    browsing, and event management.
+  version: 1.0.0
+  contact:
+    name: CitySkate Support
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+tags:
+  - name: Auth
+    description: Registration, login and logout
+  - name: Users
+    description: User profile management
+  - name: Routes
+    description: Skating routes and locations
+  - name: Rentals
+    description: Rental point management
+  - name: Events
+    description: Skating event management
+  - name: Admin
+    description: Administrator operations
+
+# PATHS
+
+paths:
+
+  # AUTH
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user account (FR-01)
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Log in with credentials (FR-02)
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Log out the current user (FR-03)
+      operationId: logoutUser
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Logged out successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/password-reset:
+    post:
+      tags: [Auth]
+      summary: Request password reset via email (FR-05)
+      operationId: requestPasswordReset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+      responses:
+        '204':
+          description: Password reset email sent
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # USERS
+
+  /users/me:
+    get:
+      tags: [Users]
+      summary: Get current user profile
+      operationId: getCurrentUser
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    put:
+      tags: [Users]
+      summary: Update current user profile (FR-04)
+      operationId: updateCurrentUser
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ROUTES
+
+  /routes:
+    get:
+      tags: [Routes]
+      summary: Browse skating routes with optional filters (FR-06, FR-08)
+      operationId: getRoutes
+      parameters:
+        - name: maxDistance
+          in: query
+          description: Maximum route length in kilometres
+          schema:
+            type: number
+            format: double
+        - name: nearLat
+          in: query
+          description: Latitude for proximity filter
+          schema:
+            type: number
+            format: double
+        - name: nearLng
+          in: query
+          description: Longitude for proximity filter
+          schema:
+            type: number
+            format: double
+        - name: radiusKm
+          in: query
+          description: Search radius in kilometres around nearLat/nearLng
+          schema:
+            type: number
+            format: double
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: List of routes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoutePage'
+
+    post:
+      tags: [Routes]
+      summary: Create and save a new route (FR-07)
+      operationId: createRoute
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RouteRequest'
+      responses:
+        '201':
+          description: Route created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Route'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /routes/{routeId}:
+    parameters:
+      - $ref: '#/components/parameters/RouteId'
+
+    get:
+      tags: [Routes]
+      summary: Get details of a single route
+      operationId: getRouteById
+      responses:
+        '200':
+          description: Route details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Route'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Routes]
+      summary: Update a route (FR-07, Admin FR-20)
+      operationId: updateRoute
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RouteRequest'
+      responses:
+        '200':
+          description: Route updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Route'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Routes]
+      summary: Delete a route (Admin FR-20)
+      operationId: deleteRoute
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Route deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /routes/{routeId}/share:
+    parameters:
+      - $ref: '#/components/parameters/RouteId'
+    post:
+      tags: [Routes]
+      summary: Generate a shareable link for a route (FR-07)
+      operationId: shareRoute
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Share link generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareLink'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # RENTAL POINTS
+
+  /rentals:
+    get:
+      tags: [Rentals]
+      summary: Browse rental points, optionally near a location (FR-12)
+      operationId: getRentals
+      parameters:
+        - name: nearLat
+          in: query
+          schema:
+            type: number
+            format: double
+        - name: nearLng
+          in: query
+          schema:
+            type: number
+            format: double
+        - name: radiusKm
+          in: query
+          schema:
+            type: number
+            format: double
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: List of rental points
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RentalPage'
+
+    post:
+      tags: [Rentals]
+      summary: Add a rental point to the map (FR-10, FR-11)
+      operationId: createRental
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RentalRequest'
+      responses:
+        '201':
+          description: Rental point created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RentalPoint'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /rentals/{rentalId}:
+    parameters:
+      - $ref: '#/components/parameters/RentalId'
+
+    get:
+      tags: [Rentals]
+      summary: Get details of a rental point (FR-12)
+      operationId: getRentalById
+      responses:
+        '200':
+          description: Rental point details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RentalPoint'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Rentals]
+      summary: Update rental point information (FR-11)
+      operationId: updateRental
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RentalRequest'
+      responses:
+        '200':
+          description: Rental point updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RentalPoint'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Rentals]
+      summary: Remove a rental point (Admin FR-22)
+      operationId: deleteRental
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Rental point deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /rentals/{rentalId}/reviews:
+    parameters:
+      - $ref: '#/components/parameters/RentalId'
+
+    get:
+      tags: [Rentals]
+      summary: Get reviews for a rental point (FR-13)
+      operationId: getRentalReviews
+      responses:
+        '200':
+          description: List of reviews
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Review'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags: [Rentals]
+      summary: Leave a review for a rental point (FR-13)
+      operationId: createRentalReview
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewRequest'
+      responses:
+        '201':
+          description: Review submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # EVENTS
+
+  /events:
+    get:
+      tags: [Events]
+      summary: Browse upcoming skating events (FR-14)
+      operationId: getEvents
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: from
+          in: query
+          description: Filter events starting from this date (ISO 8601)
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          description: Filter events up to this date (ISO 8601)
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Paginated list of events
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventPage'
+
+    post:
+      tags: [Events]
+      summary: Create a new skating event (FR-17)
+      operationId: createEvent
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventRequest'
+      responses:
+        '201':
+          description: Event created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /events/{eventId}:
+    parameters:
+      - $ref: '#/components/parameters/EventId'
+
+    get:
+      tags: [Events]
+      summary: Get details of an event
+      operationId: getEventById
+      responses:
+        '200':
+          description: Event details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Events]
+      summary: Update event details (FR-18)
+      operationId: updateEvent
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventRequest'
+      responses:
+        '200':
+          description: Event updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Events]
+      summary: Delete an event (Admin FR-21)
+      operationId: deleteEvent
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Event deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /events/{eventId}/participants:
+    parameters:
+      - $ref: '#/components/parameters/EventId'
+
+    get:
+      tags: [Events]
+      summary: List participants of an event
+      operationId: getEventParticipants
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of participants
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags: [Events]
+      summary: Register for an event (FR-15)
+      operationId: joinEvent
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Registered for event
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+    delete:
+      tags: [Events]
+      summary: Cancel participation in an event (FR-16)
+      operationId: leaveEvent
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Participation cancelled
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ADMIN
+
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: List all users (FR-19)
+      operationId: adminGetUsers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Paginated user list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/users/{userId}:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+
+    get:
+      tags: [Admin]
+      summary: Get a specific user (FR-19)
+      operationId: adminGetUser
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Admin]
+      summary: Delete a user account (FR-19)
+      operationId: adminDeleteUser
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: User deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+# COMPONENTS
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    RouteId:
+      name: routeId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    RentalId:
+      name: rentalId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    EventId:
+      name: eventId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+
+  responses:
+    BadRequest:
+      description: Invalid input data
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Conflict:
+      description: Resource already exists or conflicting state
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+
+  schemas:
+
+    # Auth
+
+    RegisterRequest:
+      type: object
+      required: [username, email, password]
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+          format: password
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT bearer token
+        user:
+          $ref: '#/components/schemas/UserProfile'
+
+    PasswordResetRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+
+    # Users
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [GUEST, SKATER, ORGANIZER, RENTAL_OPERATOR, ADMIN]
+        createdAt:
+          type: string
+          format: date-time
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+        email:
+          type: string
+          format: email
+
+    UserPage:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserProfile'
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+        page:
+          type: integer
+        size:
+          type: integer
+
+    # Routes
+
+    Waypoint:
+      type: object
+      required: [lat, lng]
+      properties:
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+
+    RouteRequest:
+      type: object
+      required: [name, waypoints]
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        distanceKm:
+          type: number
+          format: double
+        difficultyLevel:
+          type: string
+          enum: [EASY, MEDIUM, HARD]
+        waypoints:
+          type: array
+          minItems: 2
+          items:
+            $ref: '#/components/schemas/Waypoint'
+
+    Route:
+      allOf:
+        - $ref: '#/components/schemas/RouteRequest'
+        - type: object
+          properties:
+            id:
+              type: integer
+              format: int64
+            createdBy:
+              $ref: '#/components/schemas/UserProfile'
+            createdAt:
+              type: string
+              format: date-time
+
+    RoutePage:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/Route'
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+        page:
+          type: integer
+        size:
+          type: integer
+
+    ShareLink:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+
+    # Rentals
+
+    OpeningHours:
+      type: object
+      description: Opening hours per day of week
+      properties:
+        monday:
+          type: string
+          example: "09:00-18:00"
+        tuesday:
+          type: string
+          example: "09:00-18:00"
+        wednesday:
+          type: string
+          example: "09:00-18:00"
+        thursday:
+          type: string
+          example: "09:00-18:00"
+        friday:
+          type: string
+          example: "09:00-20:00"
+        saturday:
+          type: string
+          example: "10:00-20:00"
+        sunday:
+          type: string
+          example: "closed"
+
+    RentalRequest:
+      type: object
+      required: [name, address, lat, lng]
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        address:
+          type: string
+          maxLength: 200
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+        phone:
+          type: string
+        website:
+          type: string
+          format: uri
+        pricePerHour:
+          type: number
+          format: double
+        openingHours:
+          $ref: '#/components/schemas/OpeningHours'
+        description:
+          type: string
+          maxLength: 500
+
+    RentalPoint:
+      allOf:
+        - $ref: '#/components/schemas/RentalRequest'
+        - type: object
+          properties:
+            id:
+              type: integer
+              format: int64
+            ownerId:
+              type: integer
+              format: int64
+            averageRating:
+              type: number
+              format: double
+            reviewCount:
+              type: integer
+
+    RentalPage:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/RentalPoint'
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+        page:
+          type: integer
+        size:
+          type: integer
+
+    ReviewRequest:
+      type: object
+      required: [rating]
+      properties:
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+          maxLength: 500
+
+    Review:
+      allOf:
+        - $ref: '#/components/schemas/ReviewRequest'
+        - type: object
+          properties:
+            id:
+              type: integer
+              format: int64
+            author:
+              $ref: '#/components/schemas/UserProfile'
+            createdAt:
+              type: string
+              format: date-time
+
+    # Events
+
+    EventRequest:
+      type: object
+      required: [name, startDateTime, lat, lng]
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 1000
+        startDateTime:
+          type: string
+          format: date-time
+        endDateTime:
+          type: string
+          format: date-time
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+        locationName:
+          type: string
+          maxLength: 200
+        routeId:
+          type: integer
+          format: int64
+          description: Optional linked route
+        maxParticipants:
+          type: integer
+
+    Event:
+      allOf:
+        - $ref: '#/components/schemas/EventRequest'
+        - type: object
+          properties:
+            id:
+              type: integer
+              format: int64
+            organizer:
+              $ref: '#/components/schemas/UserProfile'
+            participantCount:
+              type: integer
+            createdAt:
+              type: string
+              format: date-time
+
+    EventPage:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/Event'
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+        page:
+          type: integer
+        size:
+          type: integer
+
+    # Errors
+
+    ApiError:
+      type: object
+      properties:
+        status:
+          type: integer
+          description: HTTP status code
+        error:
+          type: string
+          description: Short error identifier
+        message:
+          type: string
+          description: Human-readable error message
+        timestamp:
+          type: string
+          format: date-time
