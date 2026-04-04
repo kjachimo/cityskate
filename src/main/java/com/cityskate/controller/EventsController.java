@@ -1,23 +1,26 @@
-package com.cityskate.cityskate.controller;
+package com.cityskate.controller;
 
 import com.cityskate.api.EventsApi;
 import com.cityskate.model.*;
+import com.cityskate.service.EventService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
 @RestController
 public class EventsController implements EventsApi {
 
-    private static final List<Event> events = new ArrayList<>();
-    private static long idCounter = 1;
+    private final EventService eventService;
 
-    @Override
+    public EventsController(EventService eventService) {
+        this.eventService = eventService;
+    }
+
     public ResponseEntity<EventPage> getEvents(
-            Integer page, Integer size, LocalDate from, LocalDate to) {
+            Integer page, Integer size, String from, String to) {
+        List<Event> events = eventService.findAll();
         EventPage result = new EventPage()
             .content(events)
             .totalElements((long) events.size())
@@ -29,41 +32,30 @@ public class EventsController implements EventsApi {
 
     @Override
     public ResponseEntity<Event> createEvent(EventRequest eventRequest) {
-        Event e = new Event()
-            .id(idCounter++)
-            .name(eventRequest.getName())
-            .startDateTime(eventRequest.getStartDateTime())
-            .lat(eventRequest.getLat())
-            .lng(eventRequest.getLng());
-        events.add(e);
-        return ResponseEntity.status(201).body(e);
+        Event created = eventService.create(eventRequest);
+        return ResponseEntity.status(201).body(created);
     }
 
     @Override
     public ResponseEntity<Event> getEventById(Long eventId) {
-        return events.stream()
-            .filter(e -> e.getId().equals(eventId))
-            .findFirst()
+        return eventService.findById(eventId)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
     }
 
     @Override
     public ResponseEntity<Event> updateEvent(Long eventId, EventRequest eventRequest) {
-        for (Event e : events) {
-            if (e.getId().equals(eventId)) {
-                e.setName(eventRequest.getName());
-                e.setStartDateTime(eventRequest.getStartDateTime());
-                return ResponseEntity.ok(e);
-            }
-        }
-        return ResponseEntity.notFound().build();
+        return eventService.update(eventId, eventRequest)
+            .map(ResponseEntity::ok)
+            .orElse(ResponseEntity.notFound().build());
     }
 
     @Override
     public ResponseEntity<Void> deleteEvent(Long eventId) {
-        events.removeIf(e -> e.getId().equals(eventId));
-        return ResponseEntity.noContent().build();
+        if (eventService.delete(eventId)) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.notFound().build();
     }
 
     @Override
