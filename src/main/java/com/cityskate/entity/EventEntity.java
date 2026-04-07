@@ -1,6 +1,7 @@
 package com.cityskate.entity;
 
 import jakarta.persistence.*;
+import java.util.List;
 
 @Entity
 @Table(name = "events")
@@ -22,6 +23,18 @@ public class EventEntity {
     @ManyToOne
     @JoinColumn(name = "organizer_id")
     private UserEntity organizer;
+
+    @ManyToOne
+    @JoinColumn(name = "route_id")
+    private RouteEntity route;
+
+    @ManyToMany
+    @JoinTable(
+        name = "event_participants",
+        joinColumns = @JoinColumn(name = "event_id"),
+        inverseJoinColumns = @JoinColumn(name = "user_id")
+    )
+    private List<UserEntity> participants;
 
     // getters/setters
 
@@ -53,4 +66,10 @@ public class EventEntity {
 
     public UserEntity getOrganizer() { return organizer; }
     public void setOrganizer(UserEntity organizer) { this.organizer = organizer; }
+
+    public RouteEntity getRoute() { return route; }
+    public void setRoute(RouteEntity route) { this.route = route; }
+
+    public List<UserEntity> getParticipants() { return participants; }
+    public void setParticipants(List<UserEntity> participants) { this.participants = participants; }
 }

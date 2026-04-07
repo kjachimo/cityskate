@@ -2,14 +2,17 @@ package com.cityskate.service;
 
 import com.cityskate.entity.EventEntity;
 import com.cityskate.entity.UserEntity;
+import com.cityskate.entity.RouteEntity;
 import com.cityskate.model.Event;
 import com.cityskate.model.EventRequest;
 import com.cityskate.model.UserProfile;
 import com.cityskate.repository.EventRepository;
 import com.cityskate.repository.UserRepository;
+import com.cityskate.repository.RouteRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -19,12 +22,16 @@ public class EventService {
 
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
+    private final RouteRepository routeRepository;
 
     private static final Long CURRENT_USER_ID = 1L;
 
-    public EventService(EventRepository eventRepository, UserRepository userRepository) {
+    public EventService(EventRepository eventRepository,
+                        UserRepository userRepository,
+                        RouteRepository routeRepository) {
         this.eventRepository = eventRepository;
         this.userRepository = userRepository;
+        this.routeRepository = routeRepository;
     }
 
     private Event toDto(EventEntity e) {
@@ -44,7 +51,7 @@ public class EventService {
         dto.setLocationName(e.getLocationName());
         dto.setMaxParticipants(e.getMaxParticipants());
 
-        // 🔥 ORGANIZER MAPPING
+        // organizer
         if (e.getOrganizer() != null) {
             UserProfile organizerDto = new UserProfile();
             organizerDto.setId(e.getOrganizer().getId());
@@ -52,7 +59,6 @@ public class EventService {
             organizerDto.setEmail(e.getOrganizer().getEmail());
             organizerDto.setRole(UserProfile.RoleEnum.valueOf(e.getOrganizer().getRole().name()));
             organizerDto.setCreatedAt(e.getOrganizer().getCreatedAt());
-
             dto.setOrganizer(organizerDto);
         }
 
@@ -88,13 +94,19 @@ public class EventService {
     public Event create(EventRequest request) {
         EventEntity entity = toEntity(request);
 
+        // organizer
         UserEntity user = userRepository.findById(CURRENT_USER_ID)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-
         entity.setOrganizer(user);
 
-        EventEntity saved = eventRepository.save(entity);
-        return toDto(saved);
+        // route
+        if (request.getRouteId() != null) {
+            RouteEntity route = routeRepository.findById(request.getRouteId())
+                    .orElseThrow(() -> new RuntimeException("Route not found"));
+            entity.setRoute(route);
+        }
+
+        return toDto(eventRepository.save(entity));
     }
 
     public Optional<Event> findById(Long id) {
@@ -103,6 +115,7 @@ public class EventService {
 
     public Optional<Event> update(Long id, EventRequest request) {
         return eventRepository.findById(id).map(existing -> {
+
             existing.setName(request.getName());
             existing.setDescription(request.getDescription());
 
@@ -117,6 +130,12 @@ public class EventService {
             existing.setLocationName(request.getLocationName());
             existing.setMaxParticipants(request.getMaxParticipants());
 
+            if (request.getRouteId() != null) {
+                RouteEntity route = routeRepository.findById(request.getRouteId())
+                        .orElseThrow(() -> new RuntimeException("Route not found"));
+                existing.setRoute(route);
+            }
+
             return toDto(eventRepository.save(existing));
         });
     }
@@ -127,5 +146,54 @@ public class EventService {
             return true;
         }
         return false;
+    }
+
+    // 🔥 PARTICIPANTS
+
+    public void joinEvent(Long eventId) {
+        EventEntity event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new RuntimeException("Event not found"));
+
+        UserEntity user = userRepository.findById(CURRENT_USER_ID)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (event.getParticipants() == null) {
+            event.setParticipants(new ArrayList<>());
+        }
+
+        if (!event.getParticipants().contains(user)) {
+            event.getParticipants().add(user);
+            eventRepository.save(event);
+        }
+    }
+
+    public void leaveEvent(Long eventId) {
+        EventEntity event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new RuntimeException("Event not found"));
+
+        UserEntity user = userRepository.findById(CURRENT_USER_ID)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (event.getParticipants() != null) {
+            event.getParticipants().remove(user);
+            eventRepository.save(event);
+        }
+    }
+
+    public List<UserProfile> getParticipants(Long eventId) {
+        EventEntity event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new RuntimeException("Event not found"));
+
+        if (event.getParticipants() == null) return new ArrayList<>();
+
+        return event.getParticipants().stream().map(u -> {
+            UserProfile dto = new UserProfile();
+            dto.setId(u.getId());
+            dto.setUsername(u.getUsername());
+            dto.setEmail(u.getEmail());
+            dto.setRole(UserProfile.RoleEnum.valueOf(u.getRole().name()));
+            dto.setCreatedAt(u.getCreatedAt());
+            return dto;
+        }).toList();
     }
 }

@@ -1,16 +1,19 @@
 package com.cityskate.controller;
 
-import com.cityskate.api.EventsApi;
-import com.cityskate.model.*;
+import com.cityskate.model.Event;
+import com.cityskate.model.EventPage;
+import com.cityskate.model.EventRequest;
+import com.cityskate.model.UserProfile;
 import com.cityskate.service.EventService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @RestController
-public class EventsController implements EventsApi {
+@RequestMapping("/events")
+public class EventsController {
 
     private final EventService eventService;
 
@@ -18,58 +21,76 @@ public class EventsController implements EventsApi {
         this.eventService = eventService;
     }
 
+    // GET /events
+    @GetMapping
     public ResponseEntity<EventPage> getEvents(
-            Integer page, Integer size, String from, String to) {
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "20") Integer size,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to
+    ) {
         List<Event> events = eventService.findAll();
-        EventPage result = new EventPage()
-            .content(events)
-            .totalElements((long) events.size())
-            .totalPages(1)
-            .page(0)
-            .size(20);
+
+        EventPage result = new EventPage();
+        result.setContent(events);
+        result.setTotalElements((long) events.size());
+        result.setTotalPages(1);
+        result.setPage(page);
+        result.setSize(size);
+
         return ResponseEntity.ok(result);
     }
 
-    @Override
-    public ResponseEntity<Event> createEvent(EventRequest eventRequest) {
-        Event created = eventService.create(eventRequest);
+    // POST /events
+    @PostMapping
+    public ResponseEntity<Event> createEvent(@RequestBody EventRequest request) {
+        Event created = eventService.create(request);
         return ResponseEntity.status(201).body(created);
     }
 
-    @Override
-    public ResponseEntity<Event> getEventById(Long eventId) {
+    // GET /events/{id}
+    @GetMapping("/{eventId}")
+    public ResponseEntity<Event> getEventById(@PathVariable Long eventId) {
         return eventService.findById(eventId)
-            .map(ResponseEntity::ok)
-            .orElse(ResponseEntity.notFound().build());
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    @Override
-    public ResponseEntity<Event> updateEvent(Long eventId, EventRequest eventRequest) {
-        return eventService.update(eventId, eventRequest)
-            .map(ResponseEntity::ok)
-            .orElse(ResponseEntity.notFound().build());
+    // PUT /events/{id}
+    @PutMapping("/{eventId}")
+    public ResponseEntity<Event> updateEvent(
+            @PathVariable Long eventId,
+            @RequestBody EventRequest request
+    ) {
+        return eventService.update(eventId, request)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    @Override
-    public ResponseEntity<Void> deleteEvent(Long eventId) {
+    // DELETE /events/{id}
+    @DeleteMapping("/{eventId}")
+    public ResponseEntity<Void> deleteEvent(@PathVariable Long eventId) {
         if (eventService.delete(eventId)) {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.notFound().build();
     }
 
-    @Override
-    public ResponseEntity<List<UserProfile>> getEventParticipants(Long eventId) {
+    // GET /events/{id}/participants
+    @GetMapping("/{eventId}/participants")
+    public ResponseEntity<List<UserProfile>> getParticipants(@PathVariable Long eventId) {
         return ResponseEntity.ok(new ArrayList<>());
     }
 
-    @Override
-    public ResponseEntity<Void> joinEvent(Long eventId) {
+    // POST /events/{id}/participants
+    @PostMapping("/{eventId}/participants")
+    public ResponseEntity<Void> joinEvent(@PathVariable Long eventId) {
         return ResponseEntity.status(201).build();
     }
 
-    @Override
-    public ResponseEntity<Void> leaveEvent(Long eventId) {
+    // DELETE /events/{id}/participants
+    @DeleteMapping("/{eventId}/participants")
+    public ResponseEntity<Void> leaveEvent(@PathVariable Long eventId) {
         return ResponseEntity.noContent().build();
     }
 }
