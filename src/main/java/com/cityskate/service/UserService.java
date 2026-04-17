@@ -1,60 +1,94 @@
 package com.cityskate.service;
 
 import com.cityskate.entity.UserEntity;
-import com.cityskate.model.UpdateProfileRequest;
 import com.cityskate.model.UserProfile;
 import com.cityskate.repository.UserRepository;
 import org.springframework.stereotype.Service;
+
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService {
 
     private final UserRepository userRepository;
 
-    private static final Long CURRENT_USER_ID = 1L;
-
     public UserService(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
 
-    // DTO mapping
+    // ===== ENTITY → DTO =====
     private UserProfile toDto(UserEntity u) {
         UserProfile dto = new UserProfile();
         dto.setId(u.getId());
         dto.setUsername(u.getUsername());
         dto.setEmail(u.getEmail());
-        dto.setRole(UserProfile.RoleEnum.valueOf(u.getRole().name()));
-        if (u.getCreatedAt() != null)
-            dto.setCreatedAt(u.getCreatedAt());
+
+        if (u.getCreatedAt() != null) {
+            dto.setCreatedAt(OffsetDateTime.parse(u.getCreatedAt()));
+        }
+
         return dto;
     }
 
-    public UserProfile getCurrentUser() {
-        UserEntity user = userRepository.findById(CURRENT_USER_ID)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        return toDto(user);
-    }
-
-    public UserProfile updateCurrentUser(UpdateProfileRequest request) {
-        UserEntity user = userRepository.findById(CURRENT_USER_ID)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        if (request.getUsername() != null) {
-            user.setUsername(request.getUsername());
-        }
-
-        if (request.getEmail() != null) {
-            user.setEmail(request.getEmail());
-        }
-
-        return toDto(userRepository.save(user));
-    }
-
-    // pomocnicze – do testów / register
-    public UserProfile createTestUser(String username, String email) {
+    // ===== DTO → ENTITY =====
+    private UserEntity toEntity(UserProfile dto) {
         UserEntity u = new UserEntity();
-        u.setUsername(username);
-        u.setEmail(email);
-        return toDto(userRepository.save(u));
+        u.setUsername(dto.getUsername());
+        u.setEmail(dto.getEmail());
+
+        if (dto.getCreatedAt() != null) {
+            u.setCreatedAt(dto.getCreatedAt().toString());
+        } else {
+            u.setCreatedAt(OffsetDateTime.now().toString());
+        }
+
+        return u;
+    }
+
+    // ===== GET ALL =====
+    public List<UserProfile> findAll() {
+        return userRepository.findAll()
+                .stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
+    // ===== GET BY ID =====
+    public Optional<UserProfile> findById(Long id) {
+        return userRepository.findById(id)
+                .map(this::toDto);
+    }
+
+    // ===== CREATE =====
+    public UserProfile create(UserProfile request) {
+        UserEntity saved = userRepository.save(toEntity(request));
+        return toDto(saved);
+    }
+
+    // ===== UPDATE =====
+    public Optional<UserProfile> update(Long id, UserProfile request) {
+        return userRepository.findById(id).map(existing -> {
+
+            existing.setUsername(request.getUsername());
+            existing.setEmail(request.getEmail());
+
+            if (request.getCreatedAt() != null) {
+                existing.setCreatedAt(request.getCreatedAt().toString());
+            }
+
+            return toDto(userRepository.save(existing));
+        });
+    }
+
+    // ===== DELETE =====
+    public boolean delete(Long id) {
+        if (userRepository.existsById(id)) {
+            userRepository.deleteById(id);
+            return true;
+        }
+        return false;
     }
 }

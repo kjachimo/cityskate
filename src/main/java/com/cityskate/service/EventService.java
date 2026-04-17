@@ -57,9 +57,7 @@ public class EventService {
             organizerDto.setId(e.getOrganizer().getId());
             organizerDto.setUsername(e.getOrganizer().getUsername());
             organizerDto.setEmail(e.getOrganizer().getEmail());
-            organizerDto.setRole(UserProfile.RoleEnum.valueOf(e.getOrganizer().getRole().name()));
-            organizerDto.setCreatedAt(e.getOrganizer().getCreatedAt());
-            dto.setOrganizer(organizerDto);
+            //dto.setOrganizer(organizerDto);
         }
 
         return dto;
@@ -93,11 +91,6 @@ public class EventService {
 
     public Event create(EventRequest request) {
         EventEntity entity = toEntity(request);
-
-        // organizer
-        UserEntity user = userRepository.findById(CURRENT_USER_ID)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        entity.setOrganizer(user);
 
         // route
         if (request.getRouteId() != null) {
@@ -191,8 +184,6 @@ public class EventService {
             dto.setId(u.getId());
             dto.setUsername(u.getUsername());
             dto.setEmail(u.getEmail());
-            dto.setRole(UserProfile.RoleEnum.valueOf(u.getRole().name()));
-            dto.setCreatedAt(u.getCreatedAt());
             return dto;
         }).toList();
     }
