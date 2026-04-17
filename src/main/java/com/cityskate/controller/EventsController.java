@@ -1,5 +1,7 @@
 package com.cityskate.controller;
 
+import com.cityskate.api.EventsApi;
+import com.cityskate.api.UsersApi;
 import com.cityskate.model.Event;
 import com.cityskate.model.EventPage;
 import com.cityskate.model.EventRequest;
@@ -12,8 +14,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 @RestController
+@CrossOrigin(origins = "http://localhost:4200")
 @RequestMapping("/events")
-public class EventsController {
+public class EventsController implements EventsApi{
 
     private final EventService eventService;
 

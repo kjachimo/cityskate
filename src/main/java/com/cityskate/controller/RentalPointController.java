@@ -1,5 +1,7 @@
 package com.cityskate.controller;
 
+import com.cityskate.api.RentalsApi;
+import com.cityskate.api.UsersApi;
 import com.cityskate.model.RentalPoint;
 import com.cityskate.service.RentalPointService;
 import org.springframework.http.ResponseEntity;
@@ -9,7 +11,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/rental-points")
-public class RentalPointController {
+public class RentalPointController implements RentalsApi{
 
     private final RentalPointService service;
 

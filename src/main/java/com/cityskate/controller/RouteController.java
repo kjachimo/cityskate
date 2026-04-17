@@ -1,5 +1,7 @@
 package com.cityskate.controller;
 
+import com.cityskate.api.RoutesApi;
+import com.cityskate.api.UsersApi;
 import com.cityskate.model.Route;
 import com.cityskate.model.RouteRequest;
 import com.cityskate.service.RouteService;
@@ -10,7 +12,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/routes")
-public class RouteController {
+public class RouteController implements RoutesApi{
 
     private final RouteService routeService;
 

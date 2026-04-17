@@ -1,8 +1,6 @@
 package com.cityskate.entity;
 
 import jakarta.persistence.*;
-import java.time.OffsetDateTime;
-import java.util.List;
 
 @Entity
 @Table(name = "users")
@@ -14,36 +12,35 @@ public class UserEntity {
 
     private String username;
     private String email;
+    private String createdAt;
 
-    @Enumerated(EnumType.STRING)
-    private Role role;
+    // ===== GETTERS / SETTERS =====
 
-    private OffsetDateTime createdAt;
-
-    public enum Role {
-        ADMIN,
-        SKATER
+    public Long getId() {
+        return id;
     }
 
-    @ManyToMany(mappedBy = "participants")
-    private List<EventEntity> events;
+    public String getUsername() {
+        return username;
+    }
 
-    // getters/setters
+    public void setUsername(String username) {
+        this.username = username;
+    }
 
-    public Long getId() { return id; }
+    public String getEmail() {
+        return email;
+    }
 
-    public String getUsername() { return username; }
-    public void setUsername(String username) { this.username = username; }
+    public void setEmail(String email) {
+        this.email = email;
+    }
 
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
+    public String getCreatedAt() {
+        return createdAt;
+    }
 
-    public Role getRole() { return role; }
-    public void setRole(Role role) { this.role = role; }
-
-    public OffsetDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
-
-    public List<EventEntity> getEvents() { return events; }
-    public void setEvents(List<EventEntity> events) { this.events = events; }
+    public void setCreatedAt(String createdAt) {
+        this.createdAt = createdAt;
+    }
 }
